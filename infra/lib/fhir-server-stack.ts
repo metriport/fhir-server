@@ -36,6 +36,8 @@ type Settings = {
   taskCountMax: number;
   minDBCap: number;
   maxDBCap: number;
+  thresholdVolumeReadIops: number;
+  thresholdVolumeWriteIops: number;
   /** Causes the duration of each completed statement to be logged if the statement ran for at least the specified amount of time. https://www.postgresql.org/docs/current/runtime-config-logging.html#GUC-LOG-MIN-DURATION-STATEMENT */
   minSlowLogDurationInMs: number;
   /** The load balancer idle timeout, in seconds. Can be between 1 and 4000 seconds */
@@ -55,10 +57,12 @@ export function settings(): Settings {
       ...defaults,
       cpu: 4 * vCPU,
       memoryLimitMiB: 8192,
-      taskCountMin: 6,
-      taskCountMax: 10,
-      minDBCap: 10,
-      maxDBCap: 48,
+      taskCountMin: 8,
+      taskCountMax: 20,
+      minDBCap: 15,
+      maxDBCap: 96,
+      thresholdVolumeReadIops: 2_500_000,
+      thresholdVolumeWriteIops: 2_500_000,
     };
   }
   if (isSandbox(config)) {
@@ -70,6 +74,8 @@ export function settings(): Settings {
       taskCountMax: 5,
       minDBCap: 3,
       maxDBCap: 12,
+      thresholdVolumeReadIops: 1_000_000,
+      thresholdVolumeWriteIops: 800_000,
     };
   }
   return {
@@ -80,6 +86,8 @@ export function settings(): Settings {
     taskCountMax: 5,
     minDBCap: 1,
     maxDBCap: 8,
+    thresholdVolumeReadIops: 1_000_000,
+    thresholdVolumeWriteIops: 800_000,
   };
 }
 
@@ -148,7 +156,8 @@ export class FHIRServerStack extends Stack {
     dbCluster: rds.IDatabaseCluster;
     dbCreds: { username: string; password: secret.Secret };
   } {
-    const { minDBCap, maxDBCap, minSlowLogDurationInMs } = settings();
+    const theSettings = settings();
+    const { minDBCap, maxDBCap, minSlowLogDurationInMs } = theSettings;
 
     // create database credentials
     const dbClusterName = "fhir-server";
@@ -207,7 +216,12 @@ export class FHIRServerStack extends Stack {
     });
 
     // add performance alarms
-    this.addDBClusterPerformanceAlarms(dbCluster, dbClusterName, alarmAction);
+    this.addDBClusterPerformanceAlarms(
+      dbCluster,
+      dbClusterName,
+      theSettings,
+      alarmAction
+    );
 
     return {
       dbCluster,
@@ -369,10 +383,10 @@ export class FHIRServerStack extends Stack {
     return fargateService.service;
   }
 
-  // TODO REVIEW THESE THRESHOLDS
   private addDBClusterPerformanceAlarms(
     dbCluster: rds.DatabaseCluster,
     dbClusterName: string,
+    { thresholdVolumeReadIops, thresholdVolumeWriteIops }: Settings,
     alarmAction?: SnsAction
   ) {
     const createAlarm = ({
@@ -422,7 +436,7 @@ export class FHIRServerStack extends Stack {
     createAlarm({
       metric: dbCluster.metricVolumeReadIOPs(),
       name: "VolumeReadIOPsAlarm",
-      threshold: 1_000_000, // IOPS
+      threshold: thresholdVolumeReadIops,
       evaluationPeriods: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
@@ -430,7 +444,7 @@ export class FHIRServerStack extends Stack {
     createAlarm({
       metric: dbCluster.metricVolumeWriteIOPs(),
       name: "VolumeWriteIOPsAlarm",
-      threshold: 800_000, // IOPS
+      threshold: thresholdVolumeWriteIops,
       evaluationPeriods: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
