@@ -61,7 +61,7 @@ export function settings(): Settings {
       taskCountMax: 20,
       minDBCap: 15,
       maxDBCap: 96,
-      thresholdVolumeReadIops: 2_500_000,
+      thresholdVolumeReadIops: 4_000_000,
       thresholdVolumeWriteIops: 2_500_000,
     };
   }
