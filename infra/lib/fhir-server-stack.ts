@@ -185,7 +185,7 @@ export class FHIRServerStack extends Stack {
     }
     const dbCluster = new rds.DatabaseCluster(this, "FHIR_DB", {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_14_7,
+        version: rds.AuroraPostgresEngineVersion.VER_14_4,
       }),
       instanceProps: {
         vpc: this.vpc,
