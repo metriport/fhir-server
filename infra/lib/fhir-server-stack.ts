@@ -36,8 +36,6 @@ type Settings = {
   taskCountMax: number;
   minDBCap: number;
   maxDBCap: number;
-  thresholdVolumeReadIops: number;
-  thresholdVolumeWriteIops: number;
   /** Causes the duration of each completed statement to be logged if the statement ran for at least the specified amount of time. https://www.postgresql.org/docs/current/runtime-config-logging.html#GUC-LOG-MIN-DURATION-STATEMENT */
   minSlowLogDurationInMs: number;
   /** The load balancer idle timeout, in seconds. Can be between 1 and 4000 seconds */
@@ -63,8 +61,6 @@ export function settings(): Settings {
       taskCountMax: 20,
       minDBCap: 15,
       maxDBCap: 128,
-      thresholdVolumeReadIops: 4_500_000,
-      thresholdVolumeWriteIops: 2_500_000,
       backupRetentionDays: 15,
     };
   }
@@ -77,8 +73,6 @@ export function settings(): Settings {
       taskCountMax: 5,
       minDBCap: 2,
       maxDBCap: 12,
-      thresholdVolumeReadIops: 2_000_000,
-      thresholdVolumeWriteIops: 800_000,
       backupRetentionDays: 2,
     };
   }
@@ -90,8 +84,6 @@ export function settings(): Settings {
     taskCountMax: 5,
     minDBCap: 0.5,
     maxDBCap: 8,
-    thresholdVolumeReadIops: 1_000_000,
-    thresholdVolumeWriteIops: 800_000,
     backupRetentionDays: 1,
   };
 }
@@ -193,7 +185,7 @@ export class FHIRServerStack extends Stack {
     }
     const dbCluster = new rds.DatabaseCluster(this, "FHIR_DB", {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_14_7,
+        version: rds.AuroraPostgresEngineVersion.VER_14_4,
       }),
       instanceProps: {
         vpc: this.vpc,
@@ -227,7 +219,6 @@ export class FHIRServerStack extends Stack {
     this.addDBClusterPerformanceAlarms(
       dbCluster,
       dbClusterName,
-      theSettings,
       alarmAction
     );
 
@@ -394,7 +385,6 @@ export class FHIRServerStack extends Stack {
   private addDBClusterPerformanceAlarms(
     dbCluster: rds.DatabaseCluster,
     dbClusterName: string,
-    { thresholdVolumeReadIops, thresholdVolumeWriteIops }: Settings,
     alarmAction?: SnsAction
   ) {
     const createAlarm = ({
@@ -437,22 +427,6 @@ export class FHIRServerStack extends Stack {
       metric: dbCluster.metricCPUUtilization(),
       name: "CPUUtilizationAlarm",
       threshold: 90, // percentage
-      evaluationPeriods: 3,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
-
-    createAlarm({
-      metric: dbCluster.metricVolumeReadIOPs(),
-      name: "VolumeReadIOPsAlarm",
-      threshold: thresholdVolumeReadIops,
-      evaluationPeriods: 3,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
-
-    createAlarm({
-      metric: dbCluster.metricVolumeWriteIOPs(),
-      name: "VolumeWriteIOPsAlarm",
-      threshold: thresholdVolumeWriteIops,
       evaluationPeriods: 3,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
