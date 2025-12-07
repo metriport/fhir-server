@@ -36,13 +36,13 @@ type Settings = {
   taskCountMax: number;
   minDBCap: number;
   maxDBCap: number;
-  thresholdVolumeReadIops: number;
-  thresholdVolumeWriteIops: number;
   /** Causes the duration of each completed statement to be logged if the statement ran for at least the specified amount of time. https://www.postgresql.org/docs/current/runtime-config-logging.html#GUC-LOG-MIN-DURATION-STATEMENT */
   minSlowLogDurationInMs: number;
   /** The load balancer idle timeout, in seconds. Can be between 1 and 4000 seconds */
   maxExecutionTimeout: Duration;
   listenToPort: number;
+  /** Number of days to retain automated backups for the database cluster */
+  backupRetentionDays: number;
 };
 
 export function settings(): Settings {
@@ -60,9 +60,8 @@ export function settings(): Settings {
       taskCountMin: 8,
       taskCountMax: 20,
       minDBCap: 15,
-      maxDBCap: 96,
-      thresholdVolumeReadIops: 4_500_000,
-      thresholdVolumeWriteIops: 2_500_000,
+      maxDBCap: 128,
+      backupRetentionDays: 15,
     };
   }
   if (isSandbox(config)) {
@@ -72,10 +71,9 @@ export function settings(): Settings {
       memoryLimitMiB: 2048,
       taskCountMin: 1,
       taskCountMax: 5,
-      minDBCap: 3,
+      minDBCap: 2,
       maxDBCap: 12,
-      thresholdVolumeReadIops: 2_000_000,
-      thresholdVolumeWriteIops: 800_000,
+      backupRetentionDays: 2,
     };
   }
   return {
@@ -84,10 +82,9 @@ export function settings(): Settings {
     memoryLimitMiB: 2048,
     taskCountMin: 1,
     taskCountMax: 5,
-    minDBCap: 1,
+    minDBCap: 0.5,
     maxDBCap: 8,
-    thresholdVolumeReadIops: 1_000_000,
-    thresholdVolumeWriteIops: 800_000,
+    backupRetentionDays: 1,
   };
 }
 
@@ -157,7 +154,7 @@ export class FHIRServerStack extends Stack {
     dbCreds: { username: string; password: secret.Secret };
   } {
     const theSettings = settings();
-    const { minDBCap, maxDBCap, minSlowLogDurationInMs } = theSettings;
+    const { minDBCap, maxDBCap, minSlowLogDurationInMs, backupRetentionDays } = theSettings;
 
     // create database credentials
     const dbClusterName = "fhir-server";
@@ -202,6 +199,9 @@ export class FHIRServerStack extends Stack {
       cloudwatchLogsExports: ["postgresql"],
       deletionProtection: true,
       removalPolicy: RemovalPolicy.RETAIN,
+      backup: {
+        retention: Duration.days(backupRetentionDays),
+      },
     });
 
     Aspects.of(dbCluster).add({
@@ -219,7 +219,6 @@ export class FHIRServerStack extends Stack {
     this.addDBClusterPerformanceAlarms(
       dbCluster,
       dbClusterName,
-      theSettings,
       alarmAction
     );
 
@@ -386,7 +385,6 @@ export class FHIRServerStack extends Stack {
   private addDBClusterPerformanceAlarms(
     dbCluster: rds.DatabaseCluster,
     dbClusterName: string,
-    { thresholdVolumeReadIops, thresholdVolumeWriteIops }: Settings,
     alarmAction?: SnsAction
   ) {
     const createAlarm = ({
@@ -419,7 +417,7 @@ export class FHIRServerStack extends Stack {
       metric: dbCluster.metricFreeableMemory(),
       name: "FreeableMemoryAlarm",
       threshold: mbToBytes(150),
-      evaluationPeriods: 1,
+      evaluationPeriods: 3,
       comparisonOperator:
         cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
@@ -429,31 +427,15 @@ export class FHIRServerStack extends Stack {
       metric: dbCluster.metricCPUUtilization(),
       name: "CPUUtilizationAlarm",
       threshold: 90, // percentage
-      evaluationPeriods: 1,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
-
-    createAlarm({
-      metric: dbCluster.metricVolumeReadIOPs(),
-      name: "VolumeReadIOPsAlarm",
-      threshold: thresholdVolumeReadIops,
-      evaluationPeriods: 1,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
-
-    createAlarm({
-      metric: dbCluster.metricVolumeWriteIOPs(),
-      name: "VolumeWriteIOPsAlarm",
-      threshold: thresholdVolumeWriteIops,
-      evaluationPeriods: 1,
+      evaluationPeriods: 3,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
     createAlarm({
       metric: dbCluster.metricACUUtilization(),
       name: "ACUUtilizationAlarm",
-      threshold: 80, // pct
-      evaluationPeriods: 1,
+      threshold: 85, // pct
+      evaluationPeriods: 3,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
