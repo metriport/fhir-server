@@ -28,6 +28,7 @@ import { getConfig } from "./shared/config";
 import { vCPU } from "./shared/fargate";
 import { addDefaultMetricsToTargetGroup } from "./shared/target-group";
 import { isProd, isSandbox, mbToBytes } from "./util";
+import { RetentionDays } from "aws-cdk-lib/aws-logs";
 
 type Settings = {
   cpu: number;
@@ -185,7 +186,7 @@ export class FHIRServerStack extends Stack {
     }
     const dbCluster = new rds.DatabaseCluster(this, "FHIR_DB", {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_14_4,
+        version: rds.AuroraPostgresEngineVersion.VER_14_7,
       }),
       instanceProps: {
         vpc: this.vpc,
@@ -197,6 +198,7 @@ export class FHIRServerStack extends Stack {
       storageEncrypted: true,
       parameterGroup,
       cloudwatchLogsExports: ["postgresql"],
+      cloudwatchLogsRetention: RetentionDays.ONE_YEAR,
       deletionProtection: true,
       removalPolicy: RemovalPolicy.RETAIN,
       backup: {
