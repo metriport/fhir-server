@@ -211,6 +211,7 @@ export class FHIRServerStack extends Stack {
             minCapacity: minDBCap,
             maxCapacity: maxDBCap,
           };
+          node.storageType = rds.DBClusterStorageType.AURORA_IOPT1;
         }
       },
     });
