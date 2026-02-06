@@ -157,9 +157,8 @@ export class FHIRServerStack extends Stack {
     const { minDBCap, maxDBCap, minSlowLogDurationInMs, backupRetentionDays } = theSettings;
 
     // create database credentials
+    const dbConfig = props.config.fhirDatabase;
     const dbClusterName = "fhir-server";
-    const dbName = props.config.dbName;
-    const dbUsername = props.config.dbUsername;
     const dbPasswordSecret = new secret.Secret(this, "FHIRServerDBPassword", {
       secretName: "FHIRServerDBPassword",
       generateSecretString: {
@@ -168,7 +167,7 @@ export class FHIRServerStack extends Stack {
       },
     });
     const dbCreds = Credentials.fromPassword(
-      dbUsername,
+      dbConfig.username,
       dbPasswordSecret.secretValue
     );
     // aurora serverlessv2 db
@@ -191,8 +190,9 @@ export class FHIRServerStack extends Stack {
         vpc: this.vpc,
         instanceType: new InstanceType("serverless"),
       },
+      preferredMaintenanceWindow: dbConfig.maintenanceWindow,
       credentials: dbCreds,
-      defaultDatabaseName: dbName,
+      defaultDatabaseName: dbConfig.name,
       clusterIdentifier: dbClusterName,
       storageEncrypted: true,
       parameterGroup,
@@ -225,7 +225,7 @@ export class FHIRServerStack extends Stack {
 
     return {
       dbCluster,
-      dbCreds: { username: dbUsername, password: dbPasswordSecret },
+      dbCreds: { username: dbConfig.username, password: dbPasswordSecret },
     };
   }
 
@@ -256,10 +256,10 @@ export class FHIRServerStack extends Stack {
 
     // Prep DB related data to the server
     if (!dbCreds.password) throw new Error(`Missing DB password`);
+    const dbConfig = props.config.fhirDatabase;
     const dbAddress = dbCluster.clusterEndpoint.hostname;
     const dbPort = dbCluster.clusterEndpoint.port;
-    const dbName = props.config.dbName;
-    const dbUrl = `jdbc:postgresql://${dbAddress}:${dbPort}/${dbName}`;
+    const dbUrl = `jdbc:postgresql://${dbAddress}:${dbPort}/${dbConfig.name}`;
 
     // Run some servers on fargate containers
     const fargateService =

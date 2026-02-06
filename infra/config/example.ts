@@ -11,7 +11,10 @@ export const config: EnvConfig = {
   },
   domain: "metriport.com",
   subdomain: "fhir",
-  dbName: "my_db",
-  dbUsername: "my_db_user",
+  fhirDatabase: {
+    name: "my_db",
+    username: "my_db_user",
+    maintenanceWindow: "Sun:02:00-Sun:02:30",
+  },
 };
 export default config;
