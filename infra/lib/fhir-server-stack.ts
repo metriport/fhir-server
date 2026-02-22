@@ -59,8 +59,8 @@ export function settings(): Settings {
       memoryLimitMiB: 8192,
       taskCountMin: 8,
       taskCountMax: 20,
-      minDBCap: 15,
-      maxDBCap: 96,
+      minDBCap: 24,
+      maxDBCap: 128,
       thresholdVolumeReadIops: 4_500_000,
       thresholdVolumeWriteIops: 2_500_000,
     };
