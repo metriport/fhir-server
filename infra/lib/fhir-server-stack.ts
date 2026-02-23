@@ -116,7 +116,7 @@ export class FHIRServerStack extends Stack {
     //-------------------------------------------
     const { dbCluster, dbCreds } = this.setupDB(
       props,
-      slackNotification?.alarmAction,
+      slackNotification?.alarmAction
     );
 
     //-------------------------------------------
@@ -126,7 +126,7 @@ export class FHIRServerStack extends Stack {
       props,
       dbCluster,
       dbCreds,
-      slackNotification?.alarmAction,
+      slackNotification?.alarmAction
     );
 
     //-------------------------------------------
@@ -148,7 +148,7 @@ export class FHIRServerStack extends Stack {
 
   private setupDB(
     props: FHIRServerProps,
-    alarmAction?: SnsAction,
+    alarmAction?: SnsAction
   ): {
     dbCluster: rds.IDatabaseCluster;
     dbCreds: { username: string; password: secret.Secret };
@@ -170,18 +170,18 @@ export class FHIRServerStack extends Stack {
     });
     const dbCreds = Credentials.fromPassword(
       dbUsername,
-      dbPasswordSecret.secretValue,
+      dbPasswordSecret.secretValue
     );
     // aurora serverlessv2 db
     const parameterGroup = rds.ParameterGroup.fromParameterGroupName(
       this,
       "FHIR_DB_Params",
-      "default.aurora-postgresql14",
+      "default.aurora-postgresql14"
     );
     if (minSlowLogDurationInMs && minSlowLogDurationInMs >= 0) {
       parameterGroup.addParameter(
         "log_min_duration_statement",
-        minSlowLogDurationInMs.toString(),
+        minSlowLogDurationInMs.toString()
       );
     }
     const dbCluster = new rds.DatabaseCluster(this, "FHIR_DB", {
@@ -230,7 +230,7 @@ export class FHIRServerStack extends Stack {
     props: FHIRServerProps,
     dbCluster: rds.IDatabaseCluster,
     dbCreds: { username: string; password: secret.Secret },
-    alarmAction?: SnsAction,
+    alarmAction?: SnsAction
   ): FargateService {
     const {
       taskCountMin,
@@ -288,14 +288,14 @@ export class FHIRServerStack extends Stack {
             cpuArchitecture: ecs.CpuArchitecture.X86_64,
             operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
           },
-        },
+        }
       );
 
     // This speeds up deployments so the tasks are swapped quicker.
     // See for details: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html#deregistration-delay
     fargateService.targetGroup.setAttribute(
       "deregistration_delay.timeout_seconds",
-      "17",
+      "17"
     );
 
     // This also speeds up deployments so the health checks have a faster turnaround.
@@ -365,7 +365,7 @@ export class FHIRServerStack extends Stack {
     fargateService.service.connections.allowFrom(
       ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
       ec2.Port.allTraffic(),
-      "Allow traffic from within the VPC to the service secure port",
+      "Allow traffic from within the VPC to the service secure port"
     );
 
     // Add internal subdomain for the server
@@ -373,7 +373,7 @@ export class FHIRServerStack extends Stack {
       recordName: `${props.config.subdomain}.${props.config.domain}`,
       zone: this.zone,
       target: r53.RecordTarget.fromAlias(
-        new r53_targets.LoadBalancerTarget(fargateService.loadBalancer),
+        new r53_targets.LoadBalancerTarget(fargateService.loadBalancer)
       ),
     });
 
@@ -383,7 +383,7 @@ export class FHIRServerStack extends Stack {
   private addDBClusterPerformanceAlarms(
     dbCluster: rds.DatabaseCluster,
     dbClusterName: string,
-    alarmAction?: SnsAction,
+    alarmAction?: SnsAction
   ) {
     const createAlarm = ({
       name,
@@ -456,13 +456,13 @@ export class FHIRServerStack extends Stack {
 
 function setupSlackNotifSnsTopic(
   stack: Stack,
-  config: EnvConfig,
+  config: EnvConfig
 ): { snsTopic: ITopic; alarmAction: SnsAction } | undefined {
   if (!config.slack) return undefined;
   const slackNotifSnsTopic = sns.Topic.fromTopicArn(
     stack,
     "SlackSnsTopic",
-    config.slack.snsTopicArn,
+    config.slack.snsTopicArn
   );
   const alarmAction = new SnsAction(slackNotifSnsTopic);
   return { snsTopic: slackNotifSnsTopic, alarmAction };
