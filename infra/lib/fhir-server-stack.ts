@@ -59,8 +59,8 @@ export function settings(): Settings {
       memoryLimitMiB: 8192,
       taskCountMin: 8,
       taskCountMax: 20,
-      minDBCap: 15,
-      maxDBCap: 128,
+      minDBCap: 20,
+      maxDBCap: 196,
       backupRetentionDays: 15,
     };
   }
@@ -154,7 +154,8 @@ export class FHIRServerStack extends Stack {
     dbCreds: { username: string; password: secret.Secret };
   } {
     const theSettings = settings();
-    const { minDBCap, maxDBCap, minSlowLogDurationInMs, backupRetentionDays } = theSettings;
+    const { minDBCap, maxDBCap, minSlowLogDurationInMs, backupRetentionDays } =
+      theSettings;
 
     // create database credentials
     const dbClusterName = "fhir-server";
@@ -185,7 +186,7 @@ export class FHIRServerStack extends Stack {
     }
     const dbCluster = new rds.DatabaseCluster(this, "FHIR_DB", {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_14_4,
+        version: rds.AuroraPostgresEngineVersion.VER_14_17,
       }),
       instanceProps: {
         vpc: this.vpc,
@@ -217,11 +218,7 @@ export class FHIRServerStack extends Stack {
     });
 
     // add performance alarms
-    this.addDBClusterPerformanceAlarms(
-      dbCluster,
-      dbClusterName,
-      alarmAction
-    );
+    this.addDBClusterPerformanceAlarms(dbCluster, dbClusterName, alarmAction);
 
     return {
       dbCluster,
