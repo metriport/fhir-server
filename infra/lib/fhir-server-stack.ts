@@ -60,7 +60,7 @@ export function settings(): Settings {
       taskCountMin: 8,
       taskCountMax: 20,
       minDBCap: 20,
-      maxDBCap: 196,
+      maxDBCap: 128,
       backupRetentionDays: 15,
     };
   }
@@ -83,7 +83,7 @@ export function settings(): Settings {
     taskCountMin: 1,
     taskCountMax: 5,
     minDBCap: 0.5,
-    maxDBCap: 9,
+    maxDBCap: 8,
     backupRetentionDays: 1,
   };
 }
