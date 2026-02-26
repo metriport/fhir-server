@@ -60,7 +60,7 @@ export function settings(): Settings {
       memoryLimitMiB: 8192,
       taskCountMin: 8,
       taskCountMax: 20,
-      minDBCap: 20,
+      minDBCap: 15,
       maxDBCap: 128,
       backupRetentionDays: 15,
     };
