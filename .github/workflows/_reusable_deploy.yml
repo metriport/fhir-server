@@ -68,7 +68,7 @@ jobs:
         uses: metriport/deploy-with-cdk@master
         with:
           cdk_action: "diff"
-          cdk_version: "2.1029.4"
+          cdk_version: "2.1105.0"
           cdk_stack: "FHIRServerStack"
           cdk_env: "${{ inputs.deploy_env }}"
         env:
@@ -82,7 +82,7 @@ jobs:
         uses: metriport/deploy-with-cdk@master
         with:
           cdk_action: "deploy --verbose --require-approval never"
-          cdk_version: "2.1029.4"
+          cdk_version: "2.1105.0"
           cdk_stack: "FHIRServerStack"
           cdk_env: "${{ inputs.deploy_env }}"
         env:
