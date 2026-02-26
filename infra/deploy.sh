@@ -35,8 +35,8 @@ Deploy() {
     cmd="deploy"
   fi
   echo "$cmd'ing to env $env"
-  cdk bootstrap -c env=$env
-  cdk $cmd -c env=$env FHIRServerStack
+  npx cdk bootstrap -c env=$env
+  npx cdk $cmd -c env=$env FHIRServerStack
   echo "Done!"
 }
 

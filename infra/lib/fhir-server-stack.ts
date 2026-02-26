@@ -28,6 +28,7 @@ import { getConfig } from "./shared/config";
 import { vCPU } from "./shared/fargate";
 import { addDefaultMetricsToTargetGroup } from "./shared/target-group";
 import { isProd, isSandbox, mbToBytes } from "./util";
+import { RetentionDays } from "aws-cdk-lib/aws-logs";
 
 type Settings = {
   cpu: number;
@@ -154,7 +155,8 @@ export class FHIRServerStack extends Stack {
     dbCreds: { username: string; password: secret.Secret };
   } {
     const theSettings = settings();
-    const { minDBCap, maxDBCap, minSlowLogDurationInMs, backupRetentionDays } = theSettings;
+    const { minDBCap, maxDBCap, minSlowLogDurationInMs, backupRetentionDays } =
+      theSettings;
 
     // create database credentials
     const dbClusterName = "fhir-server";
@@ -185,7 +187,7 @@ export class FHIRServerStack extends Stack {
     }
     const dbCluster = new rds.DatabaseCluster(this, "FHIR_DB", {
       engine: rds.DatabaseClusterEngine.auroraPostgres({
-        version: rds.AuroraPostgresEngineVersion.VER_14_4,
+        version: rds.AuroraPostgresEngineVersion.VER_14_17,
       }),
       instanceProps: {
         vpc: this.vpc,
@@ -197,6 +199,7 @@ export class FHIRServerStack extends Stack {
       storageEncrypted: true,
       parameterGroup,
       cloudwatchLogsExports: ["postgresql"],
+      cloudwatchLogsRetention: RetentionDays.ONE_YEAR,
       deletionProtection: true,
       removalPolicy: RemovalPolicy.RETAIN,
       backup: {
@@ -217,11 +220,7 @@ export class FHIRServerStack extends Stack {
     });
 
     // add performance alarms
-    this.addDBClusterPerformanceAlarms(
-      dbCluster,
-      dbClusterName,
-      alarmAction
-    );
+    this.addDBClusterPerformanceAlarms(dbCluster, dbClusterName, alarmAction);
 
     return {
       dbCluster,
