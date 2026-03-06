@@ -24,7 +24,9 @@ export async function initConfig(node: Node): Promise<EnvConfig> {
   const configPath = `../../config/${env}.ts`;
   const configModule = await import(configPath);
   if (!configModule || !configModule.default) {
-    throw new Error(`Ensure config is defined, could not fine file ${configPath}`);
+    throw new Error(
+      `Ensure config is defined, could not fine file ${configPath}`
+    );
   }
   config = configModule.default as EnvConfig;
   return config;

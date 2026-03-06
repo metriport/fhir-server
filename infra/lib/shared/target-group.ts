@@ -1,7 +1,13 @@
 import { Duration } from "aws-cdk-lib";
-import { ComparisonOperator, TreatMissingData } from "aws-cdk-lib/aws-cloudwatch";
+import {
+  ComparisonOperator,
+  TreatMissingData,
+} from "aws-cdk-lib/aws-cloudwatch";
 import { SnsAction } from "aws-cdk-lib/aws-cloudwatch-actions";
-import { ApplicationTargetGroup, HttpCodeTarget } from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import {
+  ApplicationTargetGroup,
+  HttpCodeTarget,
+} from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { Construct } from "constructs";
 import { addAlarmToMetric } from "../shared/cloudwatch-metric";
 
