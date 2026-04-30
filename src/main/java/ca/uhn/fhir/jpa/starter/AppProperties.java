@@ -598,11 +598,18 @@ public class AppProperties {
 
   }
 
+  /**
+   * @see https://github.com/hapifhir/hapi-fhir/blob/master/hapi-fhir-server/src/main/java/ca/uhn/fhir/rest/server/interceptor/LoggingInterceptor.java
+   */
   public static class Logger {
 
     private String name = "fhirtest.access";
-    private String error_format = "ERROR - ${requestVerb} ${requestUrl}";
-    private String format = "Path[${servletPath}] Source[${requestHeader.x-forwarded-for}] Operation[${operationType} ${operationName} ${idOrResourceName}] UA[${requestHeader.user-agent}] Params[${requestParameters}] ResponseEncoding[${responseEncodingNoDefault}] Operation[${operationType} ${operationName} ${idOrResourceName}] UA[${requestHeader.user-agent}] Params[${requestParameters}] ResponseEncoding[${responseEncodingNoDefault}]";
+
+    private String format = "Path[${servletPath}] Source[${requestHeader.x-forwarded-for}] "
+      + "Operation[${operationType} ${operationName} ${idOrResourceName}] UA[${requestHeader.user-agent}] "
+      + "Params[${requestParameters}] ResponseEncoding[${responseEncodingNoDefault}] Ms[${processingTimeMillis}]";
+
+    private String error_format = "ERROR " + format + " Exception[${exceptionMessage}]";
     private Boolean log_exceptions = true;
 
     public String getName() {
