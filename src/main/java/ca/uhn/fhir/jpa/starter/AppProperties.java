@@ -605,10 +605,9 @@ public class AppProperties {
 
     private String name = "fhirtest.access";
 
-    private String format =
-        "Path[${servletPath}] Source[${requestHeader.x-forwarded-for}] "
-            + "Operation[${operationType} ${operationName} ${idOrResourceName}] UA[${requestHeader.user-agent}] "
-            + "Params[${requestParameters}] ResponseEncoding[${responseEncodingNoDefault}] Ms[${processingTimeMillis}]";
+    private String format = "Path[${servletPath}] Source[${requestHeader.x-forwarded-for}] "
+      + "Operation[${operationType} ${operationName} ${idOrResourceName}] UA[${requestHeader.user-agent}] "
+      + "Params[${requestParameters}] ResponseEncoding[${responseEncodingNoDefault}] Ms[${processingTimeMillis}]";
 
     private String error_format = "ERROR " + format + " Exception[${exceptionMessage}]";
     private Boolean log_exceptions = true;
