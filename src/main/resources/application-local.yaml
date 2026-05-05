@@ -42,7 +42,6 @@ spring:
   #      hibernate.cache.use_second_level_cache: false
   #      hibernate.cache.use_structured_entries: false
   #      hibernate.cache.use_minimal_puts: false
-  ### Hibernate Search disabled; set hibernate.search.enabled true and configure lucene/elasticsearch props to re-enable.
       hibernate.search.enabled: false
   # security:
   #   oauth2:
