@@ -122,8 +122,8 @@ hapi:
     #    cr_enabled: true
     #    ips_enabled: false
     #    default_encoding: JSON
-    #    default_pretty_print: true
-    #    default_page_size: 20
+    default_pretty_print: false
+    default_page_size: 50
     delete_expunge_enabled: true
     #    enable_repository_validating_interceptor: true
     #    enable_index_missing_fields: false
@@ -184,7 +184,7 @@ hapi:
     #      log_exceptions: true
     #      name: fhirtest.access
     #    max_binary_size: 104857600
-    #    max_page_size: 200
+    max_page_size: 500
     #    retain_cached_searches_mins: 60
     reuse_cached_search_results_millis: 0
     # tester:
