@@ -29,7 +29,9 @@ public class MetriportValidatorConfig {
 				validator.setNoExtensibleWarnings(true);
 				validator.setBestPracticeWarningLevel(BestPracticeWarningLevel.Ignore);
 				validator.setErrorForUnknownProfiles(false);
-				validator.setAssumeValidRestReferences(false);
+				
+				// Don't hit db for reference checks
+				validator.setAssumeValidRestReferences(true);
 				return validator;
 			}
 		};
