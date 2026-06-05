@@ -179,7 +179,7 @@ export class FhirValidateServerStack extends Stack {
       cooldown: Duration.minutes(1),
       evaluationPeriods: 5,
       datapointsToAlarm: 3,
-      scalingSteps: [
+      scalingSteps: [ // cdk needs two steps or throws
         { lower: 70, change: +2 },
         { lower: 80, change: +2 },
       ],
@@ -193,7 +193,7 @@ export class FhirValidateServerStack extends Stack {
       cooldown: Duration.minutes(5),
       evaluationPeriods: 5,
       datapointsToAlarm: 5,
-      scalingSteps: [
+      scalingSteps: [ // cdk needs two steps or throws
         { upper: 45, change: -1 },
         { upper: 25, change: -1 },
       ],
