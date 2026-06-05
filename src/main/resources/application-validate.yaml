@@ -48,5 +48,3 @@ hapi:
     enforce_referential_integrity_on_write: false
     enforce_referential_integrity_on_delete: false
     reuse_cached_search_results_millis: 0
-    # Overridden per env via HAPI_FHIR_SERVER_ADDRESS on the validate ECS task
-    server_address: http://localhost:8080/fhir
