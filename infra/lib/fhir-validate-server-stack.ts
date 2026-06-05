@@ -206,7 +206,7 @@ export class FhirValidateServerStack extends Stack {
       alarmAction,
     });
 
-    // Internal ALB only; tighten to the API security group in metriport-private if desired.
+    // Internal ALB only
     fargateService.service.connections.allowFrom(
       ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
       ec2.Port.tcp(8080),
