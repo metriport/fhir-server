@@ -1,0 +1,52 @@
+# Validate-only FHIR pool: in-memory H2 (schema only, never used for clinical data).
+# Activate with SPRING_PROFILES_ACTIVE=validate
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health"
+
+server:
+  port: 8080
+
+spring:
+  main:
+    allow-circular-references: true
+  flyway:
+    enabled: false
+    check-location: false
+    baselineOnMigrate: true
+  datasource:
+    url: jdbc:h2:mem:validate;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+    driverClassName: org.h2.Driver
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    properties:
+      hibernate.format_sql: false
+      hibernate.show_sql: false
+      hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect
+      hibernate.search.enabled: false
+
+hapi:
+  fhir:
+    fhir_version: R4
+    default_pretty_print: false
+    default_page_size: 20
+    openapi_enabled: false
+    bulk_import_enabled: false
+    bulk_export_enabled: false
+    mdm_enabled: false
+    expunge_enabled: false
+    delete_expunge_enabled: false
+    allow_multiple_delete: false
+    allow_cascading_deletes: false
+    narrative_enabled: false
+    advanced_lucene_indexing: false
+    enforce_referential_integrity_on_write: false
+    enforce_referential_integrity_on_delete: false
+    reuse_cached_search_results_millis: 0
+    # Overridden per env via HAPI_FHIR_SERVER_ADDRESS on the validate ECS task
+    server_address: http://localhost:8080/fhir

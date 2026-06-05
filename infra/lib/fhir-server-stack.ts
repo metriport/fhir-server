@@ -20,12 +20,11 @@ import { Credentials } from "aws-cdk-lib/aws-rds";
 import * as r53 from "aws-cdk-lib/aws-route53";
 import * as r53_targets from "aws-cdk-lib/aws-route53-targets";
 import * as secret from "aws-cdk-lib/aws-secretsmanager";
-import * as sns from "aws-cdk-lib/aws-sns";
-import { ITopic } from "aws-cdk-lib/aws-sns";
 import { Construct } from "constructs";
 import { EnvConfig } from "./env-config";
 import { getConfig } from "./shared/config";
 import { vCPU } from "./shared/fargate";
+import { setupSlackNotifSnsTopic } from "./shared/slack-notifications";
 import { addDefaultMetricsToTargetGroup } from "./shared/target-group";
 import { isProd, isSandbox, mbToBytes } from "./util";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
@@ -454,18 +453,4 @@ export class FHIRServerStack extends Stack {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
   }
-}
-
-function setupSlackNotifSnsTopic(
-  stack: Stack,
-  config: EnvConfig
-): { snsTopic: ITopic; alarmAction: SnsAction } | undefined {
-  if (!config.slack) return undefined;
-  const slackNotifSnsTopic = sns.Topic.fromTopicArn(
-    stack,
-    "SlackSnsTopic",
-    config.slack.snsTopicArn
-  );
-  const alarmAction = new SnsAction(slackNotifSnsTopic);
-  return { snsTopic: slackNotifSnsTopic, alarmAction };
 }
