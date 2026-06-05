@@ -1,4 +1,5 @@
 import { Duration, Stack, StackProps } from "aws-cdk-lib";
+import { AdjustmentType } from "aws-cdk-lib/aws-applicationautoscaling";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import { SnsAction } from "aws-cdk-lib/aws-cloudwatch-actions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -165,10 +166,37 @@ export class FhirValidateServerStack extends Stack {
       minCapacity: taskCountMin,
       maxCapacity: taskCountMax,
     });
-    scaling.scaleOnCpuUtilization("autoscale_cpu", {
-      targetUtilizationPercent: 60,
-      scaleInCooldown: Duration.minutes(5),
-      scaleOutCooldown: Duration.seconds(15),
+
+    const cpuMetric = fargateService.service.metricCpuUtilization({
+      period: Duration.minutes(1),
+    });
+
+    // Step scale-out: +2 tasks when cluster CPU stays high (1 min metric periods).
+    // If CPU is >= 70% for 3 of last 5 minutes, add 2 tasks.
+    scaling.scaleOnMetric("autoscale_cpu_out", {
+      metric: cpuMetric,
+      adjustmentType: AdjustmentType.CHANGE_IN_CAPACITY,
+      cooldown: Duration.minutes(1),
+      evaluationPeriods: 5,
+      datapointsToAlarm: 3,
+      scalingSteps: [
+        { lower: 70, change: +2 },
+        { lower: 80, change: +2 },
+      ],
+    });
+
+    // Step scale-in: remove tasks slowly when CPU is comfortably low.
+    // If CPU is <= 45% for 5 of last 5 minutes, remove 1 task.
+    scaling.scaleOnMetric("autoscale_cpu_in", {
+      metric: cpuMetric,
+      adjustmentType: AdjustmentType.CHANGE_IN_CAPACITY,
+      cooldown: Duration.minutes(5),
+      evaluationPeriods: 5,
+      datapointsToAlarm: 5,
+      scalingSteps: [
+        { upper: 45, change: -1 },
+        { upper: 25, change: -1 },
+      ],
     });
 
     addDefaultMetricsToTargetGroup({
