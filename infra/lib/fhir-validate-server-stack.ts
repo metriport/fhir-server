@@ -209,7 +209,7 @@ export class FhirValidateServerStack extends Stack {
     // Internal ALB only
     fargateService.service.connections.allowFrom(
       ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
-      ec2.Port.tcp(8080),
+      ec2.Port.tcp(listenToPort),
       "Allow VPC traffic to validate service"
     );
 
