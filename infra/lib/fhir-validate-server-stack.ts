@@ -33,9 +33,9 @@ function validateSettings(): ValidateSettings {
   if (isProd(config)) {
     return {
       ...defaults,
-      cpu: 4 * vCPU,
+      cpu: 2 * vCPU,
       memoryLimitMiB: 4096,
-      taskCountMin: 2,
+      taskCountMin: 4,
       taskCountMax: 20,
     };
   }
@@ -166,14 +166,9 @@ export class FhirValidateServerStack extends Stack {
       maxCapacity: taskCountMax,
     });
     scaling.scaleOnCpuUtilization("autoscale_cpu", {
-      targetUtilizationPercent: 90,
-      scaleInCooldown: Duration.minutes(2),
-      scaleOutCooldown: Duration.seconds(30),
-    });
-    scaling.scaleOnMemoryUtilization("autoscale_mem", {
-      targetUtilizationPercent: 90,
-      scaleInCooldown: Duration.minutes(2),
-      scaleOutCooldown: Duration.seconds(30),
+      targetUtilizationPercent: 60,
+      scaleInCooldown: Duration.minutes(5),
+      scaleOutCooldown: Duration.seconds(15),
     });
 
     addDefaultMetricsToTargetGroup({
