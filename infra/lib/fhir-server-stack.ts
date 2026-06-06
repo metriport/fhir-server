@@ -250,6 +250,7 @@ export class FHIRServerStack extends Stack {
 
     const dockerImage = new ecr_assets.DockerImageAsset(this, "FHIRImage", {
       directory: "../",
+      assetName: "fhir-server-image",
     });
 
     // Prep DB related data to the server

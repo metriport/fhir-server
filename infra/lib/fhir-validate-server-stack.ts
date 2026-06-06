@@ -96,6 +96,7 @@ export class FhirValidateServerStack extends Stack {
 
     const dockerImage = new ecr_assets.DockerImageAsset(this, "FHIRValidateImage", {
       directory: "../",
+      assetName: "fhir-server-image",
     });
 
     const fargateService =
