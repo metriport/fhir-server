@@ -19,13 +19,10 @@ on:
         description: "The contents of the infra configuration file, in base64"
 
 jobs:
-  deploy:
-    name: Deploy
-    # prevents 2+ devs/workflows trying to deploy to AWS at the same time
-    # https://serverlessfirst.com/emails/how-to-prevent-concurrent-deployments-of-serverless-stacks-in-github-actions/
-    # TODO Consider the solution here: https://github.com/tj-actions/aws-cdk/blob/main/action.yml
+  deploy-fhir-server:
+    name: Deploy FHIR Server
     concurrency:
-      group: ${{ format('{0}-{1}', github.workflow, github.job) }}
+      group: fhir-server-${{ inputs.deploy_env }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.deploy_env }}
     defaults:
@@ -36,16 +33,15 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "lts/*"
-      - run: env
-        shell: bash
       - run: |
           echo "Git ref: $(git rev-parse HEAD)"
+          echo "Stack: FHIRServerStack"
+          echo "Env: ${{ inputs.deploy_env }}"
         shell: bash
 
       # SET CONFIG FILES
       - name: Infra set config file
         run: |
-          echo "Env ${{ inputs.deploy_env }}"
           echo "${{ secrets.INFRA_CONFIG }}" | base64 -d > ${{ inputs.deploy_env }}.ts
           ls -la
         working-directory: "./infra/config"
@@ -84,6 +80,74 @@ jobs:
           cdk_action: "deploy --verbose --require-approval never"
           cdk_version: "2.1105.0"
           cdk_stack: "FHIRServerStack"
+          cdk_env: "${{ inputs.deploy_env }}"
+        env:
+          INPUT_PATH: "infra"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+  deploy-fhir-validate-server:
+    name: Deploy FHIR Validate Server
+    concurrency:
+      group: fhir-validate-${{ inputs.deploy_env }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.deploy_env }}
+    defaults:
+      run:
+        working-directory: "./infra"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "lts/*"
+      - run: |
+          echo "Git ref: $(git rev-parse HEAD)"
+          echo "Stack: FhirValidateServerStack"
+          echo "Env: ${{ inputs.deploy_env }}"
+        shell: bash
+
+      # SET CONFIG FILES
+      - name: Infra set config file
+        run: |
+          echo "${{ secrets.INFRA_CONFIG }}" | base64 -d > ${{ inputs.deploy_env }}.ts
+          ls -la
+        working-directory: "./infra/config"
+
+      # INSTALL DEPENDENCIES
+      - name: Install NodeJS dependencies
+        run: npm ci --ignore-scripts
+        working-directory: "./infra"
+
+      - name: Build
+        run: npm run build
+        working-directory: "./infra"
+
+      - name: Test
+        run: npm run test
+        working-directory: "./infra"
+
+      # CDK DIFF
+      - name: Diff CDK stack
+        uses: metriport/deploy-with-cdk@master
+        with:
+          cdk_action: "diff"
+          cdk_version: "2.1105.0"
+          cdk_stack: "FhirValidateServerStack"
+          cdk_env: "${{ inputs.deploy_env }}"
+        env:
+          INPUT_PATH: "infra"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+
+      # DEPLOY
+      - name: Deploy CDK stack
+        uses: metriport/deploy-with-cdk@master
+        with:
+          cdk_action: "deploy --verbose --require-approval never"
+          cdk_version: "2.1105.0"
+          cdk_stack: "FhirValidateServerStack"
           cdk_env: "${{ inputs.deploy_env }}"
         env:
           INPUT_PATH: "infra"
