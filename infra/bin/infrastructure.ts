@@ -2,6 +2,7 @@
 import * as cdk from "aws-cdk-lib";
 import "source-map-support/register";
 import { EnvConfig } from "../lib/env-config";
+import { FhirValidateServerStack } from "../lib/fhir-validate-server-stack";
 import { FHIRServerStack } from "../lib/fhir-server-stack";
 import { initConfig } from "../lib/shared/config";
 
@@ -23,6 +24,11 @@ async function deploy(config: EnvConfig) {
   // Deploy the FHIR server stack.
   //---------------------------------------------------------------------------------
   new FHIRServerStack(app, "FHIRServerStack", { env, config });
+
+  //---------------------------------------------------------------------------------
+  // Validate-only FHIR pool (H2, no Aurora).
+  //---------------------------------------------------------------------------------
+  new FhirValidateServerStack(app, "FhirValidateServerStack", { env, config });
 
   //---------------------------------------------------------------------------------
   // Execute the updates on AWS
