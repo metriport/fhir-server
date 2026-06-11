@@ -36,8 +36,8 @@ function validateSettings(): ValidateSettings {
       ...defaults,
       cpu: 2 * vCPU,
       memoryLimitMiB: 4096,
-      taskCountMin: 4,
-      taskCountMax: 20,
+      taskCountMin: 1,
+      taskCountMax: 10,
     };
   }
   if (isSandbox(config)) {
