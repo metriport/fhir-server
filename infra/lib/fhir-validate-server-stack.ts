@@ -34,9 +34,9 @@ function validateSettings(): ValidateSettings {
   if (isProd(config)) {
     return {
       ...defaults,
-      cpu: 2 * vCPU,
+      cpu: 1 * vCPU,
       memoryLimitMiB: 4096,
-      taskCountMin: 1,
+      taskCountMin: 2,
       taskCountMax: 10,
     };
   }
