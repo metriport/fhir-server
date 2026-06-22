@@ -14,6 +14,7 @@ import { getConfig } from "./shared/config";
 import { vCPU } from "./shared/fargate";
 import { setupSlackNotifSnsTopic } from "./shared/slack-notifications";
 import { addDefaultMetricsToTargetGroup } from "./shared/target-group";
+import { applyCostAllocationTags } from "./shared/cost-allocation";
 import { isProd, isSandbox } from "./util";
 
 type ValidateSettings = {
@@ -77,6 +78,14 @@ export class FhirValidateServerStack extends Stack {
 
     const slackNotification = setupSlackNotifSnsTopic(this, props.config);
     this.setupFargateService(slackNotification?.alarmAction);
+
+    applyCostAllocationTags(this, {
+      domain: "shared",
+      capability: "fhir-validation",
+      component: "compute",
+      deployableUnit: "fhir-validate-server",
+      env: props.config.environmentType,
+    });
   }
 
   private setupFargateService(alarmAction?: SnsAction): FargateService {
