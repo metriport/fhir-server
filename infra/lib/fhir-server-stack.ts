@@ -26,6 +26,10 @@ import { getConfig } from "./shared/config";
 import { vCPU } from "./shared/fargate";
 import { setupSlackNotifSnsTopic } from "./shared/slack-notifications";
 import { addDefaultMetricsToTargetGroup } from "./shared/target-group";
+import {
+  applyComponentTag,
+  applyCostAllocationTags,
+} from "./shared/cost-allocation";
 import { isProd, isSandbox, mbToBytes } from "./util";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 
@@ -128,6 +132,18 @@ export class FHIRServerStack extends Stack {
       dbCreds,
       slackNotification?.alarmAction
     );
+
+    //-------------------------------------------
+    // Cost allocation tags
+    //-------------------------------------------
+    applyCostAllocationTags(this, {
+      domain: "shared",
+      capability: "fhir-server",
+      component: "compute",
+      deployableUnit: "fhir-server",
+      env: props.config.environmentType,
+    });
+    applyComponentTag(dbCluster, "data");
 
     //-------------------------------------------
     // Output
