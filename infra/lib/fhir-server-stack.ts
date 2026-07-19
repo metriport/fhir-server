@@ -302,6 +302,8 @@ export class FHIRServerStack extends Stack {
           healthCheckGracePeriod: Duration.seconds(120),
           publicLoadBalancer: false,
           idleTimeout: maxExecutionTimeout,
+          enableECSManagedTags: true,
+          propagateTags: ecs.PropagatedTagSource.SERVICE,
           runtimePlatform: {
             cpuArchitecture: ecs.CpuArchitecture.X86_64,
             operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
