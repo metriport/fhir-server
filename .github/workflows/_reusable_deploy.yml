@@ -7,11 +7,16 @@ on:
         required: true
         type: string
         description: "The environment we're deploying to, either 'staging' or 'production'"
+      AWS_DEPLOY_ROLE:
+        description: "IAM role ARN to assume via GitHub OIDC. When set, takes precedence over the AWS access key secrets."
+        required: false
+        type: string
+        default: ""
     secrets:
       AWS_ACCESS_KEY_ID:
-        required: true
+        required: false
       AWS_SECRET_ACCESS_KEY:
-        required: true
+        required: false
       AWS_REGION:
         required: true
       INFRA_CONFIG:
@@ -20,6 +25,9 @@ on:
 
 jobs:
   deploy:
+    permissions:
+      contents: read
+      id-token: write
     name: Deploy
     # prevents 2+ devs/workflows trying to deploy to AWS at the same time
     # https://serverlessfirst.com/emails/how-to-prevent-concurrent-deployments-of-serverless-stacks-in-github-actions/
@@ -65,6 +73,21 @@ jobs:
         run: npm run test
         working-directory: "./infra"
 
+      - name: Configure AWS credentials (OIDC)
+        if: inputs.AWS_DEPLOY_ROLE != ''
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ inputs.AWS_DEPLOY_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configure AWS credentials (legacy access keys)
+        if: inputs.AWS_DEPLOY_ROLE == ''
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       # CDK DIFF
       - name: Diff CDK stacks
         uses: metriport/deploy-with-cdk@2bacd2d78cc401947d3f459691e861b7deb05b8e
@@ -75,8 +98,6 @@ jobs:
           cdk_env: "${{ inputs.deploy_env }}"
         env:
           INPUT_PATH: "infra"
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
 
       # DEPLOY — single cdk deploy publishes the shared Docker asset once
@@ -89,6 +110,4 @@ jobs:
           cdk_env: "${{ inputs.deploy_env }}"
         env:
           INPUT_PATH: "infra"
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
