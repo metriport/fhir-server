@@ -8,10 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import javax.persistence.EntityManagerFactory;
+import jakarta.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
-import org.hl7.fhir.common.hapi.validation.support.CachingValidationSupport;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -36,7 +35,7 @@ import com.metriport.fhir.SimplifiedOAuthAuthorizationInterceptor;
 import ca.uhn.fhir.batch2.coordinator.JobDefinitionRegistry;
 import ca.uhn.fhir.batch2.jobs.imprt.BulkDataImportProvider;
 import ca.uhn.fhir.batch2.jobs.reindex.ReindexJobParameters;
-import ca.uhn.fhir.batch2.jobs.reindex.ReindexProvider;
+import ca.uhn.fhir.batch2.jobs.bulkmodify.reindex.ReindexProvider;
 import ca.uhn.fhir.batch2.model.JobDefinition;
 import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.context.FhirContext;
@@ -44,16 +43,18 @@ import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.support.IValidationSupport;
 import ca.uhn.fhir.interceptor.api.IInterceptorBroadcaster;
 import ca.uhn.fhir.jpa.api.IDaoRegistry;
-import ca.uhn.fhir.jpa.api.config.DaoConfig;
+import ca.uhn.fhir.jpa.api.config.JpaStorageSettings;
 import ca.uhn.fhir.jpa.api.config.ThreadPoolFactoryConfig;
 import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
+import ca.uhn.fhir.jpa.api.dao.DaoRegistrationService;
+import ca.uhn.fhir.jpa.config.SearchConfig;
 import ca.uhn.fhir.jpa.api.dao.IFhirSystemDao;
 import ca.uhn.fhir.jpa.binary.interceptor.BinaryStorageInterceptor;
 import ca.uhn.fhir.jpa.binary.provider.BinaryAccessProvider;
-import ca.uhn.fhir.jpa.bulk.export.provider.BulkDataExportProvider;
+import ca.uhn.fhir.batch2.jobs.export.BulkDataExportProvider;
 import ca.uhn.fhir.jpa.config.util.HapiEntityManagerFactoryUtil;
 import ca.uhn.fhir.jpa.config.util.ResourceCountCacheUtil;
-import ca.uhn.fhir.jpa.config.util.ValidationSupportConfigUtil;
+import ca.uhn.fhir.jpa.model.config.SubscriptionSettings;
 import ca.uhn.fhir.jpa.dao.FulltextSearchSvcImpl;
 import ca.uhn.fhir.jpa.dao.IFulltextSearchSvc;
 import ca.uhn.fhir.jpa.dao.search.HSearchSortHelperImpl;
@@ -84,7 +85,6 @@ import ca.uhn.fhir.jpa.starter.common.validation.IRepositoryValidationIntercepto
 import ca.uhn.fhir.jpa.starter.util.EnvironmentHelper;
 import ca.uhn.fhir.jpa.subscription.util.SubscriptionDebugLogInterceptor;
 import ca.uhn.fhir.jpa.util.ResourceCountCache;
-import ca.uhn.fhir.jpa.validation.JpaValidationSupportChain;
 import ca.uhn.fhir.mdm.provider.MdmProviderLoader;
 import ca.uhn.fhir.narrative.DefaultThymeleafNarrativeGenerator;
 import ca.uhn.fhir.narrative2.NullNarrativeGenerator;
@@ -112,7 +112,7 @@ import ca.uhn.fhir.validation.ResultSeverityEnum;
 @Configuration
 // allow users to configure custom packages to scan for additional beans
 @ComponentScan(basePackages = { "${hapi.fhir.custom-bean-packages:}" })
-@Import(ThreadPoolFactoryConfig.class)
+@Import({ThreadPoolFactoryConfig.class, SearchConfig.class})
 public class StarterJpaConfig {
 
 	private static final org.slf4j.Logger ourLog = org.slf4j.LoggerFactory.getLogger(StarterJpaConfig.class);
@@ -127,11 +127,6 @@ public class StarterJpaConfig {
 		return new StaleSearchDeletingSvcImpl();
 	}
 
-	@Primary
-	@Bean
-	public CachingValidationSupport validationSupportChain(JpaValidationSupportChain theJpaValidationSupportChain) {
-		return ValidationSupportConfigUtil.newCachingValidationSupport(theJpaValidationSupportChain);
-	}
 
 	@Autowired
 	private ConfigurableEnvironment configurableEnvironment;
@@ -149,21 +144,31 @@ public class StarterJpaConfig {
 	}
 
 	@Bean
+	public DaoRegistry daoRegistry(FhirContext context, ApplicationContext applicationContext) {
+		return new JpaStarterDaoRegistry(context, applicationContext);
+	}
+
+	@Bean
+	public DaoRegistrationService daoRegistrationService(DaoRegistry registry) {
+		return new DaoRegistrationService(registry);
+	}
+
+	@Bean
 	public IResourceSupportedSvc resourceSupportedSvc(IDaoRegistry theDaoRegistry) {
 		return new DaoRegistryResourceSupportedSvc(theDaoRegistry);
 	}
 
 	@Bean(name = "myResourceCountsCache")
-	public ResourceCountCache resourceCountsCache(IFhirSystemDao<?, ?> theSystemDao) {
-		return ResourceCountCacheUtil.newResourceCountCache(theSystemDao);
+	public ResourceCountCache resourceCountsCache(DaoRegistry theDaoRegistry) {
+		return ResourceCountCacheUtil.newResourceCountCache(theDaoRegistry);
 	}
 
 	@Primary
 	@Bean
 	public LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource myDataSource,
-			ConfigurableListableBeanFactory myConfigurableListableBeanFactory, FhirContext theFhirContext) {
+			ConfigurableListableBeanFactory myConfigurableListableBeanFactory, FhirContext theFhirContext, JpaStorageSettings daoConfig) {
 		LocalContainerEntityManagerFactoryBean retVal = HapiEntityManagerFactoryUtil
-				.newEntityManagerFactory(myConfigurableListableBeanFactory, theFhirContext);
+				.newEntityManagerFactory(myConfigurableListableBeanFactory, theFhirContext, daoConfig);
 		retVal.setPersistenceUnitName("HAPI_PU");
 
 		try {
@@ -269,7 +274,7 @@ public class StarterJpaConfig {
 	@Bean
 	public RestfulServer restfulServer(IFhirSystemDao<?, ?> fhirSystemDao, AppProperties appProperties,
 			DaoRegistry daoRegistry, Optional<MdmProviderLoader> mdmProviderProvider,
-			IJpaSystemProvider jpaSystemProvider, ResourceProviderFactory resourceProviderFactory, DaoConfig daoConfig,
+			IJpaSystemProvider jpaSystemProvider, ResourceProviderFactory resourceProviderFactory, JpaStorageSettings daoConfig, SubscriptionSettings subscriptionSettings,
 			ISearchParamRegistry searchParamRegistry, IValidationSupport theValidationSupport,
 			DatabaseBackedPagingProvider databaseBackedPagingProvider, LoggingInterceptor loggingInterceptor,
 			Optional<TerminologyUploaderProvider> terminologyUploaderProvider,
@@ -279,7 +284,7 @@ public class StarterJpaConfig {
 			IValidatorModule validatorModule, Optional<GraphQLProvider> graphQLProvider,
 			BulkDataExportProvider bulkDataExportProvider, BulkDataImportProvider bulkDataImportProvider,
 			ValueSetOperationProvider theValueSetOperationProvider, ReindexProvider reindexProvider,
-			PartitionManagementProvider partitionManagementProvider,
+			PartitionManagementProvider partitionManagementProvider, RequestTenantPartitionInterceptor requestTenantPartitionInterceptor,
 			Optional<RepositoryValidatingInterceptor> repositoryValidatingInterceptor,
 			IPackageInstallerSvc packageInstallerSvc, ThreadSafeResourceDeleterSvc theThreadSafeResourceDeleterSvc,
 			ApplicationContext appContext, Optional<IpsOperationProvider> theIpsOperationProvider) {
@@ -292,6 +297,8 @@ public class StarterJpaConfig {
 				supportedResourceTypes.add("SearchParameter");
 			}
 			daoRegistry.setSupportedResourceTypes(supportedResourceTypes);
+		} else {
+			daoRegistry.setSupportedResourceTypes(fhirSystemDao.getContext().getResourceTypes());
 		}
 
 		if (appProperties.getNarrative_enabled()) {
@@ -389,7 +396,7 @@ public class StarterJpaConfig {
 
 		corsInterceptor.ifPresent(fhirServer::registerInterceptor);
 
-		if (daoConfig.getSupportedSubscriptionTypes().size() > 0) {
+		if (subscriptionSettings.getSupportedSubscriptionTypes().size() > 0) {
 			// Subscription debug logging
 			fhirServer.registerInterceptor(new SubscriptionDebugLogInterceptor());
 		}
@@ -452,7 +459,7 @@ public class StarterJpaConfig {
 
 		// Partitioning
 		if (appProperties.getPartitioning() != null) {
-			fhirServer.registerInterceptor(new RequestTenantPartitionInterceptor());
+			fhirServer.registerInterceptor(requestTenantPartitionInterceptor);
 			fhirServer.setTenantIdentificationStrategy(new UrlBaseTenantIdentificationStrategy());
 			fhirServer.registerProviders(partitionManagementProvider);
 		}
@@ -509,7 +516,7 @@ public class StarterJpaConfig {
 	}
 
 	public static IServerConformanceProvider<?> calculateConformanceProvider(IFhirSystemDao fhirSystemDao,
-			RestfulServer fhirServer, DaoConfig daoConfig, ISearchParamRegistry searchParamRegistry,
+			RestfulServer fhirServer, JpaStorageSettings daoConfig, ISearchParamRegistry searchParamRegistry,
 			IValidationSupport theValidationSupport) {
 		FhirVersionEnum fhirVersion = fhirSystemDao.getContext().getVersion().getVersion();
 		if (fhirVersion == FhirVersionEnum.DSTU2) {

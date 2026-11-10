@@ -3,7 +3,8 @@ package ca.uhn.fhir.jpa.starter;
 
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
+import org.eclipse.jetty.websocket.api.Callback;
+import org.eclipse.jetty.websocket.api.annotations.OnWebSocketOpen;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage;
 import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ public class SocketImplementation {
 	public void keepAlive() {
 		if (this.session != null) {
 			try {
-				session.getRemote().sendString("keep alive");
+				Callback.Completable.with(callback -> session.sendText("keep alive", callback)).join();
 			} catch (Throwable t) {
 				ourLog.error("Failure", t);
 			}
@@ -47,14 +48,14 @@ public class SocketImplementation {
 	 *
 	 * @param session
 	 */
-	@OnWebSocketConnect
+	@OnWebSocketOpen
 	public void onConnect(Session session) {
 		ourLog.info("Got connect: {}", session);
 		this.session = session;
 		try {
 			String sending = "bind " + myCriteria;
 			ourLog.info("Sending: {}", sending);
-			session.getRemote().sendString(sending);
+			Callback.Completable.with(callback -> session.sendText(sending, callback)).join();
 
 			ourLog.info("Connection: DONE");
 		} catch (Throwable t) {
