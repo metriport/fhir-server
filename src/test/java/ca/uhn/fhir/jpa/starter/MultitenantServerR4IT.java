@@ -7,15 +7,17 @@ import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.client.interceptor.UrlTenantSelectionInterceptor;
 import ca.uhn.fhir.rest.server.provider.ProviderConstants;
+import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import org.hl7.fhir.r4.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = {Application.class, JpaStarterWebsocketDispatcherConfig.class}, properties =
@@ -63,6 +65,10 @@ public class MultitenantServerR4IT {
     assertEquals(1, searchResult.getEntry().size());
     Patient pt2 = (Patient) searchResult.getEntry().get(0).getResource();
     assertEquals("Family A", pt2.getName().get(0).getFamily());
+
+    ourClientTenantInterceptor.setTenantId("DEFAULT");
+    assertThrows(ResourceNotFoundException.class,
+      () -> ourClient.read().resource(Patient.class).withId(pt2.getIdElement().getIdPart()).execute());
   }
 
   @Test
